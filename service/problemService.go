@@ -33,12 +33,13 @@ type Problem struct {
 	Rating    int    `json:"rating"`
 }
 
-type TagsMap map[string][]Problem
+type TagsMap map[string][]int
 type RatingMap map[int]TagsMap
 
 type ProblemDB struct {
 	tags_map   TagsMap
 	rating_map RatingMap
+	problems   []Problem
 }
 
 var problemdb ProblemDB
@@ -47,6 +48,7 @@ func init() {
 	// Initialize the maps
 	problemdb.tags_map = make(TagsMap)
 	problemdb.rating_map = make(RatingMap)
+
 }
 
 func InsertProblems(cfProblems []models.Problem) {
@@ -57,25 +59,26 @@ func InsertProblems(cfProblems []models.Problem) {
 				problemdb.rating_map[problem.Rating] = make(TagsMap)
 			}
 
+			newproblem := Problem{
+				Id:        idx,
+				ContestID: problem.ContestID,
+				Index:     problem.Index,
+				Name:      problem.Name,
+				Rating:    problem.Rating,
+			}
+
+			problemdb.problems = append(problemdb.problems, newproblem)
+
 			for _, problemTag := range problem.Tags {
-
-				problem := Problem{
-					Id:        idx,
-					ContestID: problem.ContestID,
-					Index:     problem.Index,
-					Name:      problem.Name,
-					Rating:    problem.Rating,
-				}
-				problemdb.rating_map[problem.Rating][problemTag] = append(problemdb.rating_map[problem.Rating][problemTag], problem)
-
+				problemdb.rating_map[problem.Rating][problemTag] = append(problemdb.rating_map[problem.Rating][problemTag], newproblem.Id)
 			}
 
 		}
 	}
 }
 
-func GetProblems(ratingStart, ratingEnd int, tags []string) []Problem {
-	var result []Problem
+func GetProblems(ratingStart, ratingEnd int, tags []string) []int {
+	var result []int
 	for rating, val := range problemdb.rating_map {
 		if ratingStart <= rating && rating <= ratingEnd {
 			problems := getProblems(val, tags)
@@ -86,8 +89,12 @@ func GetProblems(ratingStart, ratingEnd int, tags []string) []Problem {
 	return result
 }
 
-func getProblems(tagmap TagsMap, tags []string) []Problem {
-	var result []Problem
+func getProblems(tagmap TagsMap, tags []string) []int {
+	var result []int
+
+	if len(tags) > len(tagmap) {
+		return result
+	}
 
 	for _, tag := range tags {
 		problems := tagmap[tag]
@@ -97,12 +104,12 @@ func getProblems(tagmap TagsMap, tags []string) []Problem {
 	return result
 }
 
-func intersect(first []Problem, second []Problem) []Problem {
+func intersect(first []int, second []int) []int {
 	if len(first) == 0 {
 		return second
 	}
 
-	var result []Problem
+	var result []int
 
 	var firstlen = len(first)
 	var secondlen = len(second)
@@ -113,12 +120,14 @@ func intersect(first []Problem, second []Problem) []Problem {
 	)
 
 	for f < firstlen && s < secondlen {
-		if first[f].Id < second[s].Id {
+		if problemdb.problems[first[f]].Id < problemdb.problems[second[s]].Id {
 			f++
-		} else if first[f].Id > second[s].Id {
+		} else if problemdb.problems[first[f]].Id > problemdb.problems[second[s]].Id {
 			s++
 		} else {
-			result = append(result, first[f])
+			result = append(result, problemdb.problems[first[f]].Id)
+			f++
+			s++
 		}
 	}
 

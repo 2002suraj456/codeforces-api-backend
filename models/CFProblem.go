@@ -6,7 +6,6 @@ type Problem struct {
 	Index          string   `json:"index"`
 	Name           string   `json:"name"`
 	ProblemType    string   `json:"type"`
-	Points         string   `json:"points"`
 	Rating         int      `json:"rating,omitempty"`
 	Tags           []string `json:"tags"`
 }
