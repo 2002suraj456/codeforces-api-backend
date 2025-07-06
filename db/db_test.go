@@ -139,3 +139,52 @@ func TestWithSingleTag(t *testing.T) {
 	}
 
 }
+
+func TestWithMultipleTag(t *testing.T) {
+	db, err := getPopulatedDBInstance()
+
+	if err != nil {
+		t.Fatal("error getting populated db")
+	}
+
+	tags := []models.Tag{"dp", "greedy"}
+	ratingstart := 0
+	ratingend := 15000
+
+	resSeqIDs := db.Query(models.Rating(ratingstart), models.Rating(ratingend), tags)
+
+	var resProblems []models.Problem
+
+	for _, val := range resSeqIDs {
+		resProblems = append(resProblems, db.GetProblem(val))
+	}
+
+	directRes, err := queryFromCFDirect(ratingstart, ratingend, []string{"dp", "greedy"})
+
+	if err != nil {
+		t.Fatal("error query from cfdirectly")
+	}
+
+	var match map[string]int = make(map[string]int)
+
+	for _, problem := range resProblems {
+		match[strconv.Itoa(problem.ContestID)+problem.Index]++
+	}
+
+	for _, problem := range directRes {
+		match[strconv.Itoa(problem.ContestID)+problem.Index]--
+	}
+
+	var notmatch map[string]int = make(map[string]int)
+
+	for key, val := range match {
+		if val != 0 {
+			notmatch[key] = val
+		}
+	}
+
+	if len(notmatch) > 0 {
+		fmt.Println(notmatch)
+		t.Fatal("result not matching")
+	}
+}
